@@ -1,75 +1,78 @@
-/// <reference path="base-component.ts"/>
+import { DragTarget } from "../models/darg-drop";
+import { Project, ProjectStatus } from "../models/Project";
+import { Component } from "./base-component";
+import { autobind } from "../Decorators/Autobind";
+import { projectState } from "../State/ProjectStateMNG";
+import { ProjectListItems } from "./Project-item";
 
-namespace App {
-  // ProjectList class
-  export class ProjectList
-    extends Component<HTMLDivElement, HTMLElement>
-    implements DragTarget
-  {
-    assignedProjects: Project[];
+// ProjectList class
+export class ProjectList
+  extends Component<HTMLDivElement, HTMLElement>
+  implements DragTarget
+{
+  assignedProjects: Project[];
 
-    constructor(private type: "active" | "finished") {
-      super("project-list", "app", false, `${type}-projects`);
-      this.assignedProjects = [];
-      this.configure();
-      this.renderContent();
-    }
+  constructor(private type: "active" | "finished") {
+    super("project-list", "app", false, `${type}-projects`);
+    this.assignedProjects = [];
+    this.configure();
+    this.renderContent();
+  }
 
-    @autobind
-    dragOverHandler(event: DragEvent) {
-      if (event.dataTransfer && event.dataTransfer.types[0] === "text/plain") {
-        event.preventDefault();
-        const listEl = this.element.querySelector("ul");
-        listEl?.classList.add("droppable");
-      }
-    }
-
-    @autobind
-    dragHandler(event: DragEvent): void {
-      const prjId = event.dataTransfer!.getData("text/plain");
-      projectState.moveProject(
-        prjId,
-        this.type === "active" ? ProjectStatus.Active : ProjectStatus.finished
-      );
-    }
-    @autobind
-    dragLeaveHandler(_: DragEvent): void {
+  @autobind
+  dragOverHandler(event: DragEvent) {
+    if (event.dataTransfer && event.dataTransfer.types[0] === "text/plain") {
+      event.preventDefault();
       const listEl = this.element.querySelector("ul");
-      listEl?.classList.remove("droppable");
+      listEl?.classList.add("droppable");
     }
+  }
 
-    configure() {
-      this.element.addEventListener("dragover", this.dragOverHandler);
-      this.element.addEventListener("dragleave", this.dragLeaveHandler);
-      this.element.addEventListener("drop", this.dragHandler);
+  @autobind
+  dragHandler(event: DragEvent): void {
+    const prjId = event.dataTransfer!.getData("text/plain");
+    projectState.moveProject(
+      prjId,
+      this.type === "active" ? ProjectStatus.Active : ProjectStatus.finished
+    );
+  }
+  @autobind
+  dragLeaveHandler(_: DragEvent): void {
+    const listEl = this.element.querySelector("ul");
+    listEl?.classList.remove("droppable");
+  }
 
-      projectState.addListener((projects: Project[]) => {
-        const relevantProjects = projects.filter((prj) => {
-          if (this.type === "active") {
-            return prj.status === ProjectStatus.Active;
-          }
-          return prj.status === ProjectStatus.finished;
-        });
-        this.assignedProjects = relevantProjects;
-        this.renderProjects();
+  configure() {
+    this.element.addEventListener("dragover", this.dragOverHandler);
+    this.element.addEventListener("dragleave", this.dragLeaveHandler);
+    this.element.addEventListener("drop", this.dragHandler);
+
+    projectState.addListener((projects: Project[]) => {
+      const relevantProjects = projects.filter((prj) => {
+        if (this.type === "active") {
+          return prj.status === ProjectStatus.Active;
+        }
+        return prj.status === ProjectStatus.finished;
       });
-    }
+      this.assignedProjects = relevantProjects;
+      this.renderProjects();
+    });
+  }
 
-    renderContent() {
-      const listID = `${this.type}-projects-list`;
-      this.element.querySelector("ul")!.id = listID;
-      this.element.querySelector("h2")!.textContent =
-        this.type.toUpperCase() + " PROJECTS";
-    }
+  renderContent() {
+    const listID = `${this.type}-projects-list`;
+    this.element.querySelector("ul")!.id = listID;
+    this.element.querySelector("h2")!.textContent =
+      this.type.toUpperCase() + " PROJECTS";
+  }
 
-    private renderProjects() {
-      const listEl = document.getElementById(
-        `${this.type}-projects-list`
-      ) as HTMLUListElement;
-      listEl.innerHTML = "";
-      for (const prjItem of this.assignedProjects) {
-        new ProjectListItems(this.element.querySelector("ul")!.id, prjItem);
-      }
+  private renderProjects() {
+    const listEl = document.getElementById(
+      `${this.type}-projects-list`
+    ) as HTMLUListElement;
+    listEl.innerHTML = "";
+    for (const prjItem of this.assignedProjects) {
+      new ProjectListItems(this.element.querySelector("ul")!.id, prjItem);
     }
   }
 }
